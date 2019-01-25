@@ -14,10 +14,14 @@
 	"IsBetaVersion": false,
 	"Installed": false,
 	"Modules": [
-		{
-			"Name": "PostgreSQL",
-			"Type": "Runtime",
-			"LoadingPhase": "Default"
-		}
+        {
+          "Name": "PostgreSQL",
+          "Type": "Runtime",
+          "LoadingPhase": "PreLoadingScreen",
+          "WhitelistPlatforms": [
+            "Win64",
+            "Linux"
+          ]
+        }
 	]
 }

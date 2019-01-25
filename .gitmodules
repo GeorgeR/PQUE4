@@ -1,3 +1,0 @@
-[submodule "Source/PostgreSQL/ThirdParty/libpqxx"]
-	path = Source/PostgreSQL/ThirdParty/libpqxx
-	url = https://github.com/jtv/libpqxx.git

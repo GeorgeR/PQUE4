@@ -55,75 +55,140 @@ FPQConnection::FPQConnection(const FPQConnectionString& ConnectionString)
 FPQConnection::FPQConnection(const FString& ConnectionString)
 	: ConnectionString(ConnectionString) { }
 
+FPQConnection::FPQConnection(const FPQConnection& Other)
+	: ConnectionString(Other.ConnectionString),
+	Connection(Other.Connection)
+{
+	auto o = 123;
+}
+
 FPQConnection::~FPQConnection()
 {
 	Disconnect();
 }
 
-TFuture<bool> FPQConnection::Connect()
+bool FPQConnection::Connect()
 {
-	// Short circuit
-	//if (Connection.IsValid())
-
-	return Async<bool>(EAsyncExecution::TaskGraph, [&]() -> bool {
-		Connection = nullptr;
-		try
+	if (IsOpen())
+		return true;
+	
+	Connection = nullptr;
+	try
+	{
+		Connection = MakeShared<pqxx::connection>(TCHAR_TO_ANSI(*ConnectionString));
+		if (Connection->is_open())
 		{
-			Connection = MakeShared<pqxx::connection>(TCHAR_TO_ANSI(*ConnectionString));
-			if (Connection->is_open())
-			{
-				UE_LOG(LogPQ, Log, TEXT("Successfully connected to the database"));
-			}
-			else
-			{
-				UE_LOG(LogPQ, Error, TEXT("Error connecting to the database"));
-				return false;
-			}
+			UE_LOG(LogPQ, Log, TEXT("Successfully connected to the database"));
 		}
-		catch (const std::exception& e)
+		else
 		{
-			UE_LOG(LogPQ, Error, TEXT("Error connecting to the database, error: %s"), ANSI_TO_TCHAR(e.what()));
+			UE_LOG(LogPQ, Error, TEXT("Error connecting to the database"));
 			return false;
 		}
+	}
+	catch (const std::exception& e)
+	{
+		UE_LOG(LogPQ, Error, TEXT("Error connecting to the database, error: %s"), ANSI_TO_TCHAR(e.what()));
+		return false;
+	}
 
-		return true;
+	return true;
+}
+
+TFuture<bool> FPQConnection::ConnectAsync()
+{
+	return Async<bool>(EAsyncExecution::TaskGraph, [&] {
+		ConnectionMutex.Lock();
+		bool bResult = Connect();
+		ConnectionMutex.Unlock();
+		return bResult;
 	});
 }
 
 void FPQConnection::Disconnect()
 {
-	if (Connection.IsValid() && Connection->is_open())
+	if (Connection.IsValid() || IsOpen())
 	{
 		Connection->disconnect();
 		Connection.Reset();
 	}
 }
 
-void FPQConnection::Execute(const FString& SQL, const FString& TransactionName)
+bool FPQConnection::IsOpen() const
 {
-	check(Connection.IsValid());
-	check(Connection->is_open());
-
-	//pqxx::work Transaction = TransactionName.IsEmpty() ? pqxx::work(*Connection) : pqxx::work(*Connection, TCHAR_TO_ANSI(*TransactionName));
-	pqxx::work Transaction(*Connection);
-	auto Result = Transaction.exec(TCHAR_TO_ANSI(*SQL));
-	Transaction.commit();
+	if (Connection.IsValid())
+		return Connection->is_open();
+	
+	return false;
 }
 
-void FPQConnection::Query(const FString& SQL, const FString& TransactionName)
+bool FPQConnection::Execute(const FString& SQL, const FString& TransactionName)
 {
-	check(Connection.IsValid());
-	check(Connection->is_open());
+	check(IsOpen());
 
 	//pqxx::work Transaction = TransactionName.IsEmpty() ? pqxx::work(*Connection) : pqxx::work(*Connection, TCHAR_TO_ANSI(*TransactionName));
-	pqxx::work Transaction(*Connection);
-	auto Result = Transaction.exec(TCHAR_TO_ANSI(*SQL));
-	Transaction.commit();
+	try
+	{
+		pqxx::work Transaction(*Connection);
+		auto Result = Transaction.exec(TCHAR_TO_ANSI(*SQL));
+		Transaction.commit();
+	}
+	catch (const std::exception& e)
+	{
+		UE_LOG(LogPQ, Error, TEXT("Error executing query! Error: %s"), ANSI_TO_TCHAR(e.what()));
+		return false;
+	}
 
-	//TArray<FDbRow> Result;
-	//for (auto i = 0; i < Result.size(); i++)
-	//{
-	//	pqxx::row Row = Result.at(i);
-	//	
-	//}
+	// TODO: Return status from Result
+	return true;
+}
+
+TFuture<bool> FPQConnection::ExecuteAsync(const FString& SQL, const FString& TransactionName /*= TEXT("")*/)
+{
+	return Async<bool>(EAsyncExecution::TaskGraph, [&] {
+		ConnectionMutex.Lock();
+		auto bWasSuccessful = Execute(SQL, TransactionName);
+		ConnectionMutex.Unlock();
+		return bWasSuccessful;
+	});
+}
+
+bool FPQConnection::Query(const FString& SQL, TArray<FPQRow>& Rows, const FString& TransactionName)
+{
+	check(IsOpen());
+
+	//pqxx::work Transaction = TransactionName.IsEmpty() ? pqxx::work(*Connection) : pqxx::work(*Connection, TCHAR_TO_ANSI(*TransactionName));
+	try
+	{
+		pqxx::work Transaction(*Connection);
+		auto Result = Transaction.exec(TCHAR_TO_ANSI(*SQL));
+		Transaction.commit();
+
+		Rows.Empty(Result.size());
+		for (auto i = 0; i < (int32)Result.size(); i++)
+		{
+			pqxx::row NonConstRow = Result.at(i);
+			FPQRow Row(&NonConstRow);
+			Rows.Add(Row);
+		}
+	}
+	catch (const std::exception& e)
+	{
+		UE_LOG(LogPQ, Error, TEXT("Error executing query! Error: %s"), ANSI_TO_TCHAR(e.what()));
+		return false;
+	}
+
+	// TODO: Return status from Result
+	return true;
+}
+
+TFuture<FPQQueryResult> FPQConnection::QueryAsync(const FString& SQL, const FString& TransactionName /*= TEXT("")*/)
+{
+	return Async<FPQQueryResult>(EAsyncExecution::TaskGraph, [&] {
+		TArray<FPQRow> Rows;
+		ConnectionMutex.Lock();
+		auto bWasSuccessfull = Query(SQL, Rows, TransactionName);
+		ConnectionMutex.Unlock();
+		return FPQQueryResult{ bWasSuccessfull, Rows };
+	});
 }

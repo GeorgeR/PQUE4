@@ -1,3 +1,5 @@
+#pragma once
+
 #include "IPostgreSQLModule.h"
 
 #include "CoreMinimal.h"

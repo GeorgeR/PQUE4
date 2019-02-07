@@ -31,6 +31,21 @@ UPQConnection* UPQConnectionLibrary::Connect(const FPQConnectionString& Connecti
 	return nullptr;
 }
 
+UPQConnection * UPQConnectionLibrary::ConnectWithURL(const FString & ConnectionString, bool & bWasSuccessful)
+{
+	auto Connection = new FPQConnection(ConnectionString);
+	bWasSuccessful = Connection->Connect();
+
+	if (bWasSuccessful)
+	{
+		auto Result = NewObject<UPQConnection>();
+		Result->SetConnection(Connection);
+		return Result;
+	}
+
+	return nullptr;
+}
+
 bool UPQConnectionLibrary::Execute(UPQConnection* Connection, const FString& SQL)
 {
 	if (Connection == nullptr || !Connection->IsValid())

@@ -32,7 +32,13 @@ struct POSTGRESQL_API FPQField
 	GENERATED_BODY()
 
 public:
-	FPQField() : DataType(EPQDataType::PQ_Boolean) { }
+	FPQField()
+		: DataType(EPQDataType::PQ_Boolean),
+		bIsNull(false) { }
+
+	FPQField(EPQDataType DataType)
+		: DataType(DataType),
+		bIsNull(true) { }
 
 	explicit FPQField(const uint8& Value);
 	explicit FPQField(const int16& Value);
@@ -49,27 +55,47 @@ public:
 
 	FORCEINLINE EPQDataType GetDataType() const { return DataType; }
 
+	FORCEINLINE bool IsNull() const { return bIsNull; }
+
 	template <typename T>
-	T Get() const;
+	T As(const T& DefaultValue) const;
 
-	template <> uint8 Get<uint8>() const { return ByteValue; }
-	template <> int16 Get<int16>() const { return Integer16Value; }
-	template <> int32 Get<int32>() const { return Integer32Value; }
-	template <> int64 Get<int64>() const { return Integer64Value; }
+	template <typename T>
+	T As() const;
 
-	template <> float Get<float>() const { return FloatValue; }
-	template <> double Get<double>() const { return DoubleValue; }
+	template <> uint8 As<uint8>(const uint8& DefaultValue) const { return IsNull() ? DefaultValue : ByteValue; }
+	template <> uint8 As<uint8>() const { return As<uint8>(0);; }
 
-	template <> FString Get<FString>() const { return StringValue; }
-	template <> FChar Get<FChar>() const { return CharValue; }
+	template <> int16 As<int16>(const int16& DefaultValue) const { return IsNull() ? DefaultValue : Integer16Value; }
+	template <> int16 As<int16>() const { return As<int16>(0); }
 
-	template <> bool Get<bool>() const { return BooleanValue; }
+	template <> int32 As<int32>(const int32& DefaultValue) const { return IsNull() ? DefaultValue : Integer32Value; }
+	template <> int32 As<int32>() const { return As<int32>(0); }
+
+	template <> int64 As<int64>(const int64& DefaultValue) const { return IsNull() ? DefaultValue : Integer64Value; }
+	template <> int64 As<int64>() const { return As<int64>(0); }
+
+	template <> float As<float>(const float& DefaultValue) const { return IsNull() ? DefaultValue : FloatValue; }
+	template <> float As<float>() const { return As<float>(0.0); }
+
+	template <> double As<double>(const double& DefaultValue) const { return DoubleValue; }
+	template <> double As<double>() const { return As<double>(0.0); }
+
+	template <> FString As<FString>(const FString& DefaultValue) const { return IsNull() ? DefaultValue : StringValue; }
+	template <> FString As<FString>() const { return As<FString>(TEXT("")); }
+
+	template <> FChar As<FChar>(const FChar& DefaultValue) const { return IsNull() ? DefaultValue : CharValue; }
+	template <> FChar As<FChar>() const { return As<FChar>(FChar()); }
+
+	template <> bool As<bool>(const bool& DefaultValue) const { return IsNull() ? DefaultValue : BooleanValue; }
+	template <> bool As<bool>() const { return As<bool>(false); }
 
 	FString ToString() const;
 
 private:
 	EPQDataType DataType;
-
+	bool bIsNull;
+	
 	//TUnion<uint8, int16, int32, int64, float, double> ValuesA;
 	//TUnion<FString, FChar, bool> ValuesB;
 

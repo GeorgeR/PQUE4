@@ -67,50 +67,70 @@ FPQRow::FPQRow(pqxx::row* Row)
 
 		FString ColumnName = FString(ANSI_TO_TCHAR((char*)(*Row)[i].name()));
 		FPQField Field;
+		auto bIsNull = RowField.is_null();
 		
 		switch ((*Row)[i].type())
 		{
 		case 17: // Byte
-			Field = FPQField((uint8)RowField.as<int32>());
+			Field = bIsNull
+				? FPQField(EPQDataType::PQ_UInt8)
+				: FPQField((uint8)RowField.as<int32>());
 			break;
 
 		case 21: // Int (2 bit)
-			Field = FPQField(RowField.as<int16>());
+			Field = bIsNull
+				? FPQField(EPQDataType::PQ_Int16)
+				: FPQField(RowField.as<int16>());
 			break;
 
 		case 23: // Int (4 bit)
-			Field = FPQField(RowField.as<int32>());
+			Field = bIsNull
+				? FPQField(EPQDataType::PQ_Int32)
+				: FPQField(RowField.as<int32>());
 			break;
 
 		case 20: // Int (8 bit)
-			Field = FPQField(RowField.as<int64>());
+			Field = bIsNull
+				? FPQField(EPQDataType::PQ_Int64)
+				: FPQField(RowField.as<int64>());
 			break;
 
-
 		case 700:
-			Field = FPQField(RowField.as<float>());
+			Field = bIsNull
+				? FPQField(EPQDataType::PQ_Float)
+				: FPQField(RowField.as<float>());
 			break;
 
 		case 701:
-			Field = FPQField(RowField.as<double>());
+			Field = bIsNull
+				? FPQField(EPQDataType::PQ_Double)
+				: FPQField(RowField.as<double>());
 			break;
-
 
 		case 1263: // C_STR
 		case 2275:
 		case 1043: // VARCHAR
 		case 25: // Text
-			Field = FPQField(FString(RowField.as<std::string>().c_str()));
+			Field = bIsNull
+				? FPQField(EPQDataType::PQ_String)
+				: FPQField(FString(RowField.as<std::string>().c_str()));
 			break;
 
 		case 18: // Char
-			Field = FPQField(ANSI_TO_TCHAR(RowField.as<std::string>().c_str())[0]);
+			Field = bIsNull
+				? FPQField(EPQDataType::PQ_Char)
+				: FPQField(ANSI_TO_TCHAR(RowField.as<std::string>().c_str())[0]);
 			break;
-
 
 		case 16: // Boolean
-			Field = FPQField(RowField.as<bool>());
+			Field = bIsNull
+				? FPQField(EPQDataType::PQ_Boolean)
+				: FPQField(RowField.as<bool>());
 			break;
+
+		default:
+			ensureAlwaysMsgf(false, TEXT("Column type %i was unhandled."), (*Row)[i].type());
+			checkNoEntry();
 		}
 
 		Fields.Add(ColumnName, Field);

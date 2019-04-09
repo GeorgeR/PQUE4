@@ -72,7 +72,7 @@ bool FPQConnection::Connect()
 	if (IsOpen())
 		return true;
 	
-	Connection = nullptr;
+	Connection.Reset();
 	try
 	{
 		Connection = MakeShared<pqxx::connection>(TCHAR_TO_ANSI(*ConnectionString));

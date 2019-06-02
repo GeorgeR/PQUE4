@@ -45,6 +45,9 @@ public:
 	static UPQConnection* Connect(const FPQConnectionString& ConnectionString, bool& bWasSuccessful);
 
 	UFUNCTION(BlueprintCallable, Category = "PostgreSQL")
+	static UPQConnection* ConnectWithURL(const FString& ConnectionString, bool& bWasSuccessful);
+
+	UFUNCTION(BlueprintCallable, Category = "PostgreSQL")
 	static bool Execute(UPQConnection* Connection, const FString& SQL);
 
 	UFUNCTION(BlueprintCallable, Category = "PostgreSQL")

@@ -1,55 +1,64 @@
 #include "PQData.h"
 
 FPQField::FPQField(const uint8& Value)
-	: DataType(EPQDataType::PQ_UInt8)
+	: DataType(EPQDataType::PQ_UInt8),
+	bIsNull(false)
 {
 	ByteValue = Value;
 }
 
 FPQField::FPQField(const int16& Value)
-	: DataType(EPQDataType::PQ_Int16)
+	: DataType(EPQDataType::PQ_Int16),
+	bIsNull(false)
 {
 	Integer16Value = Value;
 }
 
 FPQField::FPQField(const int32& Value)
-	: DataType(EPQDataType::PQ_Int32)
+	: DataType(EPQDataType::PQ_Int32),
+	bIsNull(false)
 {
 	Integer32Value = Value;
 }
 
 FPQField::FPQField(const int64& Value)
-	: DataType(EPQDataType::PQ_Int64)
+	: DataType(EPQDataType::PQ_Int64),
+	bIsNull(false)
 {
 	Integer64Value = Value;
 }
 
 FPQField::FPQField(const float& Value)
-	: DataType(EPQDataType::PQ_Float)
+	: DataType(EPQDataType::PQ_Float),
+	bIsNull(false)
 {
 	FloatValue = Value;
 }
 
 FPQField::FPQField(const double& Value)
-	: DataType(EPQDataType::PQ_Double)
+	: DataType(EPQDataType::PQ_Double),
+	bIsNull(false)
 {
 	DoubleValue = Value;
 }
 
 FPQField::FPQField(const FString& Value)
-	: DataType(EPQDataType::PQ_String)
+	: DataType(EPQDataType::PQ_String),
+	bIsNull(false)
 {
 	StringValue = Value;
 }
 
 FPQField::FPQField(const FChar& Value)
-	: DataType(EPQDataType::PQ_Char)
+	: DataType(EPQDataType::PQ_Char),
+	bIsNull(false)
 {
 	CharValue = Value;
 }
 
 FPQField::FPQField(const bool& Value)
-	: DataType(EPQDataType::PQ_Boolean)
+	: DataType(EPQDataType::PQ_Boolean),
+	bIsNull(false)
 {
 	BooleanValue = Value;
 }

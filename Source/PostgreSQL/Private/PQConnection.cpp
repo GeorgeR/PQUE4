@@ -3,7 +3,7 @@
 #include "PostgreSQLModule.h"
 #include "Async.h"
 
-/** START OF WINDOWS-SPECIFIC INCLUDES/CODE */
+/** WINDOWS */
 #if PLATFORM_WINDOWS
 // Winsock Includes
 #ifndef WIN32_LEAN_AND_MEAN
@@ -23,13 +23,12 @@
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "Secur32.lib")
 #endif
-/** END OF WINDOWS-SPECIFIC INCLUDES/CODE */
+/** WINDOWS */
 
-/** START OF LINUX-SPECIFIC INCLUDES/CODE */
+/** LINUX */
 #if PLATFORM_LINUX
-// Nothing here yet! But the placeholder is here for future releases.
 #endif
-/** END OF LINUX-SPECIFIC INCLUDES/CODE */
+/** LINUX */
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -59,7 +58,6 @@ FPQConnection::FPQConnection(const FPQConnection& Other)
 	: ConnectionString(Other.ConnectionString),
 	Connection(Other.Connection)
 {
-	auto o = 123;
 }
 
 FPQConnection::~FPQConnection()
@@ -107,7 +105,7 @@ TFuture<bool> FPQConnection::ConnectAsync()
 
 void FPQConnection::Disconnect()
 {
-	if (Connection.IsValid() || IsOpen())
+	if (Connection.IsValid() && IsOpen())
 	{
 		Connection->disconnect();
 		Connection.Reset();
@@ -139,7 +137,7 @@ bool FPQConnection::Execute(const FString& SQL, const FString& TransactionName)
 		return false;
 	}
 
-	// TODO: Return status from Result
+	// #todo Return status from Result
 	return true;
 }
 
@@ -178,7 +176,7 @@ bool FPQConnection::Query(const FString& SQL, TArray<FPQRow>& Rows, const FStrin
 		return false;
 	}
 
-	// TODO: Return status from Result
+	// #todo Return status from Result
 	return true;
 }
 

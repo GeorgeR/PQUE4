@@ -33,14 +33,13 @@ public:
 	bool IsOpen() const;
 	//TSharedRef<FPQWork> BeginTransaction();
 
-	bool Execute(const FString& SQL, const FString& TransactionName = TEXT(""));
+	bool Execute(const FString& SQL, const FString& TransactionName = TEXT("")) const;
 	TFuture<bool> ExecuteAsync(const FString& SQL, const FString& TransactionName = TEXT(""));
 
-	bool Query(const FString& SQL, TArray<FPQRow>& Rows, const FString& TransactionName = TEXT(""));
+	bool Query(const FString& SQL, TArray<FPQRow>& Rows, const FString& TransactionName = TEXT("")) const;
 	TFuture<FPQQueryResult> QueryAsync(const FString& SQL, const FString& TransactionName = TEXT(""));
 
 private:
 	FString ConnectionString;
-	TSharedPtr<pqxx::connection> Connection;
-	FCriticalSection ConnectionMutex;
+	TSharedPtr<pqxx::connection, ESPMode::ThreadSafe> Connection;
 };

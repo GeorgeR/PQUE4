@@ -13,12 +13,8 @@
 
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include <windows.h>
-#include <sspi.h>
-#include <winsock2.h>
 #include <ws2tcpip.h>
-#include <iphlpapi.h>
 #include <stdio.h>
-#include "Windows/HideWindowsPlatformTypes.h"
 
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "Secur32.lib")
@@ -30,23 +26,9 @@
 #endif
 /** LINUX */
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <ctype.h>
 #include <time.h>
 
-#include <iostream>
 #include <pqxx/pqxx>
-
-//FDbRow::FDbRow(pqxx::row* Row)
-//{
-//	for (auto i = 0; i < Row->size(); i++)
-//	{
-//		TPair<FString, TUnion> Pair;
-//		Pair.Key = ANSI_TO_TCHAR((char*)(*Row)[i].name());
-//	}
-//}
 
 FPQConnection::FPQConnection(const FPQConnectionString& ConnectionString)
 	: ConnectionString(ConnectionString.ToString()) { }
@@ -56,9 +38,7 @@ FPQConnection::FPQConnection(const FString& ConnectionString)
 
 FPQConnection::FPQConnection(const FPQConnection& Other)
 	: ConnectionString(Other.ConnectionString),
-	Connection(Other.Connection)
-{
-}
+	Connection(Other.Connection) { }
 
 FPQConnection::~FPQConnection()
 {
@@ -73,7 +53,7 @@ bool FPQConnection::Connect()
 	Connection.Reset();
 	try
 	{
-		Connection = MakeShared<pqxx::connection>(TCHAR_TO_ANSI(*ConnectionString));
+		Connection = MakeShared<pqxx::connection, ESPMode::ThreadSafe>(TCHAR_TO_ANSI(*ConnectionString));
 		if (Connection->is_open())
 		{
 			UE_LOG(LogPQ, Log, TEXT("Successfully connected to the database"));
@@ -95,10 +75,8 @@ bool FPQConnection::Connect()
 
 TFuture<bool> FPQConnection::ConnectAsync()
 {
-	return Async<bool>(EAsyncExecution::TaskGraph, [&] {
-		ConnectionMutex.Lock();
-		bool bResult = Connect();
-		ConnectionMutex.Unlock();
+	return Async(EAsyncExecution::TaskGraph, [&] {
+        const auto bResult = Connect();
 		return bResult;
 	});
 }
@@ -120,15 +98,16 @@ bool FPQConnection::IsOpen() const
 	return false;
 }
 
-bool FPQConnection::Execute(const FString& SQL, const FString& TransactionName)
+bool FPQConnection::Execute(const FString& SQL, const FString& TransactionName) const
 {
 	check(IsOpen());
 
-	//pqxx::work Transaction = TransactionName.IsEmpty() ? pqxx::work(*Connection) : pqxx::work(*Connection, TCHAR_TO_ANSI(*TransactionName));
+	pqxx::result Result;
 	try
 	{
+		//pqxx::work Transaction = TransactionName.IsEmpty() ? pqxx::work(*Connection) : pqxx::work(*Connection, TCHAR_TO_ANSI(*TransactionName));
 		pqxx::work Transaction(*Connection);
-		auto Result = Transaction.exec(TCHAR_TO_ANSI(*SQL));
+		Result = Transaction.exec(TCHAR_TO_ANSI(*SQL));
 		Transaction.commit();
 	}
 	catch (const std::exception& e)
@@ -144,28 +123,27 @@ bool FPQConnection::Execute(const FString& SQL, const FString& TransactionName)
 TFuture<bool> FPQConnection::ExecuteAsync(const FString& SQL, const FString& TransactionName /*= TEXT("")*/)
 {
 	return Async<bool>(EAsyncExecution::TaskGraph, [&] {
-		ConnectionMutex.Lock();
-		auto bWasSuccessful = Execute(SQL, TransactionName);
-		ConnectionMutex.Unlock();
+        const auto bWasSuccessful = Execute(SQL, TransactionName);
 		return bWasSuccessful;
 	});
 }
 
-bool FPQConnection::Query(const FString& SQL, TArray<FPQRow>& Rows, const FString& TransactionName)
+bool FPQConnection::Query(const FString& SQL, TArray<FPQRow>& Rows, const FString& TransactionName) const
 {
 	check(IsOpen());
 
-	//pqxx::work Transaction = TransactionName.IsEmpty() ? pqxx::work(*Connection) : pqxx::work(*Connection, TCHAR_TO_ANSI(*TransactionName));
+	pqxx::result Result;
 	try
 	{
+		//pqxx::work Transaction = TransactionName.IsEmpty() ? pqxx::work(*Connection) : pqxx::work(*Connection, TCHAR_TO_ANSI(*TransactionName));
 		pqxx::work Transaction(*Connection);
-		auto Result = Transaction.exec(TCHAR_TO_ANSI(*SQL));
+        Result = Transaction.exec(TCHAR_TO_ANSI(*SQL));
 		Transaction.commit();
 
 		Rows.Empty(Result.size());
-		for (auto i = 0; i < (int32)Result.size(); i++)
+		for (auto i = 0; i < StaticCast<int32>(Result.size()); i++)
 		{
-			pqxx::row NonConstRow = Result.at(i);
+            auto NonConstRow = Result.at(i);
 			FPQRow Row(&NonConstRow);
 			Rows.Add(Row);
 		}
@@ -176,17 +154,14 @@ bool FPQConnection::Query(const FString& SQL, TArray<FPQRow>& Rows, const FStrin
 		return false;
 	}
 
-	// #todo Return status from Result
-	return true;
+	return Result.size() > 0;
 }
 
 TFuture<FPQQueryResult> FPQConnection::QueryAsync(const FString& SQL, const FString& TransactionName /*= TEXT("")*/)
 {
 	return Async<FPQQueryResult>(EAsyncExecution::TaskGraph, [&] {
 		TArray<FPQRow> Rows;
-		ConnectionMutex.Lock();
-		auto bWasSuccessfull = Query(SQL, Rows, TransactionName);
-		ConnectionMutex.Unlock();
-		return FPQQueryResult{ bWasSuccessfull, Rows };
+        const auto bWasSuccessful = Query(SQL, Rows, TransactionName);
+		return FPQQueryResult{ bWasSuccessful, Rows };
 	});
 }

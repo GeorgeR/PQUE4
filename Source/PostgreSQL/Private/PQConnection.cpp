@@ -75,7 +75,7 @@ bool FPQConnection::Connect()
 
 TFuture<bool> FPQConnection::ConnectAsync()
 {
-	return Async(EAsyncExecution::TaskGraph, [&] {
+	return Async<bool>(EAsyncExecution::TaskGraph, [&] {
         const auto bResult = Connect();
 		return bResult;
 	});

@@ -75,7 +75,7 @@ bool FPQConnection::Connect()
 
 TFuture<bool> FPQConnection::ConnectAsync()
 {
-	return Async<bool>(EAsyncExecution::TaskGraph, [&] {
+	return Async(EAsyncExecution::TaskGraph, [&] {
         const auto bResult = Connect();
 		return bResult;
 	});
@@ -122,7 +122,7 @@ bool FPQConnection::Execute(const FString& SQL, const FString& TransactionName) 
 
 TFuture<bool> FPQConnection::ExecuteAsync(const FString& SQL, const FString& TransactionName /*= TEXT("")*/)
 {
-	return Async<bool>(EAsyncExecution::TaskGraph, [&] {
+	return Async(EAsyncExecution::TaskGraph, [&] {
         const auto bWasSuccessful = Execute(SQL, TransactionName);
 		return bWasSuccessful;
 	});
@@ -159,7 +159,7 @@ bool FPQConnection::Query(const FString& SQL, TArray<FPQRow>& Rows, const FStrin
 
 TFuture<FPQQueryResult> FPQConnection::QueryAsync(const FString& SQL, const FString& TransactionName /*= TEXT("")*/)
 {
-	return Async<FPQQueryResult>(EAsyncExecution::TaskGraph, [&] {
+	return Async(EAsyncExecution::TaskGraph, [&] {
 		TArray<FPQRow> Rows;
         const auto bWasSuccessful = Query(SQL, Rows, TransactionName);
 		return FPQQueryResult{ bWasSuccessful, Rows };

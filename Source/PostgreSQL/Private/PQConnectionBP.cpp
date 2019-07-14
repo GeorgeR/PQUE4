@@ -6,9 +6,9 @@ UPQConnection::UPQConnection() { }
 
 UPQConnection::~UPQConnection() { }
 
-void UPQConnection::SetConnection(FPQConnection* Connection)
+void UPQConnection::SetConnection(FPQConnection* InConnection)
 {
-	this->Connection = MakeShareable<FPQConnection>(Connection);
+	this->Connection = MakeShareable<FPQConnection>(InConnection);
 }
 
 FPQConnectionString UPQConnectionLibrary::MakeConnectionString(const FString& DatabaseName, const FString& User, const FString& Password, const FString& Address, const int32 Port /*= 5432*/)

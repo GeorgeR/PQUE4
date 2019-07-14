@@ -21,7 +21,7 @@ public:
 	UPQConnection();
 	virtual ~UPQConnection();
 	
-	void SetConnection(FPQConnection* Connection);
+	void SetConnection(FPQConnection* InConnection);
 
 	FORCEINLINE bool IsValid() const { return ::IsValid(this) && Connection.IsValid(); }
 

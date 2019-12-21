@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "Future.h"
 
+#include "Interfaces/DbPlusConnectionInterface.h"
+
 #include "PQConnectionString.h"
 #include "PQData.h"
 
@@ -16,6 +18,7 @@ public:
 };
 
 class POSTGRESQL_API FPQConnection
+	: public IDbPlusConnectionInterface
 {
 public:
 	FPQConnection(const FPQConnectionString& ConnectionString);
@@ -25,20 +28,19 @@ public:
 
 	virtual ~FPQConnection();
 
-	bool Connect();
-	TFuture<bool> ConnectAsync();
+	bool Connect() override;
+	bool Disconnect() override;
 
-	void Disconnect();
+	bool IsConnected() const override;
+	
+	bool IsValid(FString& OutMessage) const override;
 
-	bool IsOpen() const;
-	//TSharedRef<FPQWork> BeginTransaction();
+	bool Execute(const FString& Query, const FDbPlusTransaction& Transaction = FDbPlusTransaction()) const override;
+	bool Query(const FString& Query, FDbPlusRecordSet& OutResult, const FDbPlusTransaction& Transaction = FDbPlusTransaction()) const override;
 
-	bool Execute(const FString& SQL, const FString& TransactionName = TEXT("")) const;
-	TFuture<bool> ExecuteAsync(const FString& SQL, const FString& TransactionName = TEXT(""));
-
-	bool Query(const FString& SQL, TArray<FPQRow>& Rows, const FString& TransactionName = TEXT("")) const;
-	TFuture<FPQQueryResult> QueryAsync(const FString& SQL, const FString& TransactionName = TEXT(""));
-
+protected:
+	void DecodeRow(pqxx::row* InRow, FDbPlusRow& OutRow) const;
+	
 private:
 	FString ConnectionString;
 	TSharedPtr<pqxx::connection, ESPMode::ThreadSafe> Connection;

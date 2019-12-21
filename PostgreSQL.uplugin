@@ -13,15 +13,21 @@
 	"CanContainContent": true,
 	"IsBetaVersion": false,
 	"Installed": false,
-	"Modules": [
-        {
-          "Name": "PostgreSQL",
-          "Type": "Runtime",
-          "LoadingPhase": "PreLoadingScreen",
-          "WhitelistPlatforms": [
-            "Win64",
-            "Linux"
-          ]
-        }
-	]
+  "Modules": [
+    {
+      "Name": "PostgreSQL",
+      "Type": "Runtime",
+      "LoadingPhase": "PreLoadingScreen",
+      "WhitelistPlatforms": [
+        "Win64",
+        "Linux"
+      ]
+    }
+  ],
+  "Plugins": [
+      {
+        "Name": "DbPlus",
+        "Enabled": true 
+      }
+  ] 
 }

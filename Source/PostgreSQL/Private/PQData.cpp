@@ -125,11 +125,11 @@ FPQRow::FPQRow(pqxx::row* Row)
 				: FPQField(FString(RowField.as<std::string>().c_str()));
 			break;
 
-		case 18: // Char
-			Field = bIsNull
-				? FPQField(EPQDataType::PQ_Char)
-				: FPQField(ANSI_TO_TCHAR(RowField.as<std::string>().c_str())[0]);
-			break;
+		//case 18: // Char
+		//	Field = bIsNull
+		//		? FPQField(EPQDataType::PQ_Char)
+		//		: FPQField(StaticCast<TCHAR*>(ANSI_TO_TCHAR(RowField.as<std::string>().c_str())[0]));
+		//	break;
 
 		case 16: // Boolean
 			Field = bIsNull

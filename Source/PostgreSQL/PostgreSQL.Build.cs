@@ -35,8 +35,12 @@ public class PostgreSQL : ModuleRules
 			{
                 "Core",
                 "CoreUObject",
-                "Engine"
+                "Engine",
+
+                "DbPlus",
             });
+
+        //PrivateDependencyModuleNames
 
         bEnableExceptions = true;
         LoadPQXX(Target);

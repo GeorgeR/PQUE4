@@ -8,7 +8,7 @@ UPQConnection::~UPQConnection() { }
 
 void UPQConnection::SetConnection(FPQConnection* InConnection)
 {
-	this->Connection = MakeShareable<FPQConnection>(InConnection);
+	this->Connection = MakeShareable<FPQConnection>(MoveTemp(InConnection));
 }
 
 FPQConnectionString UPQConnectionLibrary::MakeConnectionString(const FString& DatabaseName, const FString& User, const FString& Password, const FString& Address, const int32 Port /*= 5432*/)
@@ -31,20 +31,20 @@ UPQConnection* UPQConnectionLibrary::Connect(const FPQConnectionString& Connecti
 	return nullptr;
 }
 
-bool UPQConnectionLibrary::Execute(UPQConnection* Connection, const FString& SQL)
+bool UPQConnectionLibrary::Execute(UPQConnection* Connection, const FString& Query)
 {
 	if (Connection == nullptr || !Connection->IsValid())
 		return false;
 
-	return Connection->Connection->Execute(SQL);
+	return Connection->Connection->Execute(Query);
 }
 
-bool UPQConnectionLibrary::Query(UPQConnection* Connection, const FString& SQL, TArray<FPQRow>& Rows)
+bool UPQConnectionLibrary::Query(UPQConnection* Connection, const FString& Query, FDbPlusRecordSet& Rows)
 {
 	if (Connection == nullptr || !Connection->IsValid())
 		return false;
 
-	return Connection->Connection->Query(SQL, Rows);
+	return Connection->Connection->Query(Query, Rows);
 }
 
 bool UPQConnectionLibrary::Insert(UPQConnection* Connection, const FString& TableName, const TArray<UObject*> Values, const FString& Columns, TArray<FPQRow>& Rows)

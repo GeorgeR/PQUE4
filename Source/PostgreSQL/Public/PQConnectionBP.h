@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 
+#include "DbPlusRecordSet.h"
+
 #include "PQConnectionString.h"
 #include "PQData.h"
 
@@ -45,10 +47,10 @@ public:
 	static UPQConnection* Connect(const FPQConnectionString& ConnectionString, bool& bWasSuccessful);
 
 	UFUNCTION(BlueprintCallable, Category = "PostgreSQL")
-	static bool Execute(UPQConnection* Connection, const FString& SQL);
+	static bool Execute(UPQConnection* Connection, const FString& Query);
 
 	UFUNCTION(BlueprintCallable, Category = "PostgreSQL")
-	static bool Query(UPQConnection* Connection, const FString& SQL, TArray<FPQRow>& Rows);
+	static bool Query(UPQConnection* Connection, const FString& Query, FDbPlusRecordSet& Rows);
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "PostgreSQL")

@@ -42,12 +42,12 @@ FPQConnection::FPQConnection(const FPQConnection& Other)
 
 FPQConnection::~FPQConnection()
 {
-	Disconnect();
+	FPQConnection::Disconnect();
 }
 
 bool FPQConnection::Connect()
 {
-	if (IsOpen())
+	if (IsConnected())
 		return true;
 	
 	Connection.Reset();
@@ -73,24 +73,25 @@ bool FPQConnection::Connect()
 	return true;
 }
 
-TFuture<bool> FPQConnection::ConnectAsync()
+bool FPQConnection::IsValid(FString& OutMessage) const
 {
-	return Async(EAsyncExecution::TaskGraph, [&] {
-        const auto bResult = Connect();
-		return bResult;
-	});
+	// @todo
+	return true;
 }
 
-void FPQConnection::Disconnect()
+bool FPQConnection::Disconnect()
 {
-	if (Connection.IsValid() && IsOpen())
+	if (Connection.IsValid() && IsConnected())
 	{
 		Connection->disconnect();
 		Connection.Reset();
+		return true;
 	}
+
+	return false;
 }
 
-bool FPQConnection::IsOpen() const
+bool FPQConnection::IsConnected() const
 {
 	if (Connection.IsValid())
 		return Connection->is_open();
@@ -98,17 +99,16 @@ bool FPQConnection::IsOpen() const
 	return false;
 }
 
-bool FPQConnection::Execute(const FString& SQL, const FString& TransactionName) const
+bool FPQConnection::Execute(const FString& Query, const FDbPlusTransaction& Transaction) const
 {
-	check(IsOpen());
+	check(IsConnected());
 
-	pqxx::result Result;
 	try
 	{
 		//pqxx::work Transaction = TransactionName.IsEmpty() ? pqxx::work(*Connection) : pqxx::work(*Connection, TCHAR_TO_ANSI(*TransactionName));
-		pqxx::work Transaction(*Connection);
-		Result = Transaction.exec(TCHAR_TO_ANSI(*SQL));
-		Transaction.commit();
+		pqxx::work PQTransaction(*Connection);
+		auto PQResult = PQTransaction.exec(TCHAR_TO_ANSI(*Query));
+		PQTransaction.commit();
 	}
 	catch (const std::exception& e)
 	{
@@ -120,32 +120,24 @@ bool FPQConnection::Execute(const FString& SQL, const FString& TransactionName) 
 	return true;
 }
 
-TFuture<bool> FPQConnection::ExecuteAsync(const FString& SQL, const FString& TransactionName /*= TEXT("")*/)
+bool FPQConnection::Query(const FString& Query, FDbPlusRecordSet& OutResult, const FDbPlusTransaction& Transaction) const
 {
-	return Async(EAsyncExecution::TaskGraph, [&] {
-        const auto bWasSuccessful = Execute(SQL, TransactionName);
-		return bWasSuccessful;
-	});
-}
-
-bool FPQConnection::Query(const FString& SQL, TArray<FPQRow>& Rows, const FString& TransactionName) const
-{
-	check(IsOpen());
+	check(IsConnected());
 
 	pqxx::result Result;
 	try
 	{
 		//pqxx::work Transaction = TransactionName.IsEmpty() ? pqxx::work(*Connection) : pqxx::work(*Connection, TCHAR_TO_ANSI(*TransactionName));
-		pqxx::work Transaction(*Connection);
-        Result = Transaction.exec(TCHAR_TO_ANSI(*SQL));
-		Transaction.commit();
+		pqxx::work PQTransaction(*Connection);
+        Result = PQTransaction.exec(TCHAR_TO_ANSI(*Query));
+		PQTransaction.commit();
 
-		Rows.Empty(Result.size());
 		for (auto i = 0; i < StaticCast<int32>(Result.size()); i++)
 		{
-            auto NonConstRow = Result.at(i);
-			FPQRow Row(&NonConstRow);
-			Rows.Add(Row);
+            auto PQRow = Result.at(i);
+			FDbPlusRow Row;
+			DecodeRow(&PQRow, Row);
+			OutResult.AppendRow(MoveTemp(Row));
 		}
 	}
 	catch (const std::exception& e)
@@ -157,11 +149,81 @@ bool FPQConnection::Query(const FString& SQL, TArray<FPQRow>& Rows, const FStrin
 	return Result.size() > 0;
 }
 
-TFuture<FPQQueryResult> FPQConnection::QueryAsync(const FString& SQL, const FString& TransactionName /*= TEXT("")*/)
+void FPQConnection::DecodeRow(pqxx::row* InRow, FDbPlusRow& OutRow) const
 {
-	return Async(EAsyncExecution::TaskGraph, [&] {
-		TArray<FPQRow> Rows;
-        const auto bWasSuccessful = Query(SQL, Rows, TransactionName);
-		return FPQQueryResult{ bWasSuccessful, Rows };
-	});
+	for (auto i = 0; i < StaticCast<int32>(InRow->size()); i++)
+	{
+		auto RowField = (*InRow)[i];
+
+		auto ColumnName = FString(ANSI_TO_TCHAR((char*)(*InRow)[i].name()));
+		FDbPlusField Field;
+		const auto bIsNull = RowField.is_null();
+
+		const auto PQType = (*InRow)[i].type();
+		switch (PQType)
+		{
+		case 17: // Byte
+			Field = bIsNull
+				? FDbPlusField(EDbPlusDataType::DPDT_UInt8)
+				: FDbPlusField((uint8)RowField.as<int32>());
+			break;
+
+		case 21: // Int (2 bit)
+			Field = bIsNull
+				? FDbPlusField(EDbPlusDataType::DPDT_Int16)
+				: FDbPlusField(RowField.as<int16>());
+			break;
+
+		case 23: // Int (4 bit)
+			Field = bIsNull
+				? FDbPlusField(EDbPlusDataType::DPDT_Int32)
+				: FDbPlusField(RowField.as<int32>());
+			break;
+
+		case 20: // Int (8 bit)
+			Field = bIsNull
+				? FDbPlusField(EDbPlusDataType::DPDT_Int64)
+				: FDbPlusField(RowField.as<int64>());
+			break;
+
+		case 700:
+			Field = bIsNull
+				? FDbPlusField(EDbPlusDataType::DPDT_Float)
+				: FDbPlusField(RowField.as<float>());
+			break;
+
+		case 701:
+			Field = bIsNull
+				? FDbPlusField(EDbPlusDataType::DPDT_Double)
+				: FDbPlusField(RowField.as<double>());
+			break;
+
+		case 1263: // C_STR
+		case 2275:
+		case 1043: // VARCHAR
+		case 25: // Text
+			Field = bIsNull
+				? FDbPlusField(EDbPlusDataType::DPDT_String)
+				: FDbPlusField(FString(RowField.as<std::string>().c_str()));
+			break;
+
+		//case 18: // Char
+		//	Field = bIsNull
+		//		? FPQField(EDbPlusDataType::DPDT_Char)
+		//		: FPQField(StaticCast<TCHAR*>(ANSI_TO_TCHAR(RowField.as<std::string>().c_str())[0]));
+		//	break;
+
+		case 16: // Boolean
+			Field = bIsNull
+				? FDbPlusField(EDbPlusDataType::DPDT_Boolean)
+				: FDbPlusField(RowField.as<bool>());
+			break;
+
+		default:
+			ensureAlwaysMsgf(false, TEXT("Column type %i was unhandled."), (*InRow)[i].type());
+			checkNoEntry();
+		}
+
+		OutRow.Fields.Add(ColumnName, Field);
+	}
 }

@@ -1,7 +1,7 @@
 #include "PQConnection.h"
 
 #include "PostgreSQLModule.h"
-#include "Async.h"
+#include "Async/Async.h"
 
 /** WINDOWS */
 #if PLATFORM_WINDOWS

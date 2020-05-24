@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Future.h"
+#include "Async/Future.h"
 
 #include "PQConnectionString.generated.h"
 

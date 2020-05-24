@@ -63,8 +63,11 @@ public class PostgreSQL : ModuleRules
             PublicAdditionalLibraries.Add(Path.Combine(PQLibrariesPath, "postgres.lib"));
             PublicAdditionalLibraries.Add(Path.Combine(PQLibrariesPath, "libpq.lib"));
             PublicAdditionalLibraries.Add(Path.Combine(PQXXLibrariesPath, "libpqxx_static.lib"));
-            PublicAdditionalLibraries.Add(Path.Combine(PQLibrariesPath, "libcrypto.lib"));
-            PublicAdditionalLibraries.Add(Path.Combine(PQLibrariesPath, "libssl.lib"));
+
+            // already defined in UE4
+            // @todo: how to check if they're already defined?
+            //PublicAdditionalLibraries.Add(Path.Combine(PQLibrariesPath, "libcrypto.lib"));
+            //PublicAdditionalLibraries.Add(Path.Combine(PQLibrariesPath, "libssl.lib"));
         }
         else if (Target.Platform == UnrealTargetPlatform.Linux)
         {
